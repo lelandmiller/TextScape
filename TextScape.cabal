@@ -1,0 +1,21 @@
+name:           TextScape
+version:        0.1
+cabal-version:  >=1.2
+build-type:     Simple
+author:         Leland Miller
+
+executable TextScape
+  hs-source-dirs:  src
+  main-is:         Main.hs
+  build-depends:   
+                   base >= 4,
+                   parsec >=3.1.3 && <3.2,
+                   containers >=0.5.0 && <0.6
+  ghc-options:     -Wall
+  other-modules:   
+                   Interpreter.Util,
+                   Interpreter.Eval,
+                   Interpreter.Data,
+                   Interpreter.Parser,
+                   Interpreter.Kernel
+
