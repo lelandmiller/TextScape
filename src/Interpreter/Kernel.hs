@@ -7,13 +7,23 @@ import           System.Directory
 kernelFunctions :: [(String, Obj)]
 kernelFunctions =
         [("cat", KerFun cat)
-        ,("let", KerFun let')
+        ,("let", KerFun kerLet)
         ,("listSym", KerFun listSym)
         ,("makeNamespace", KerFun makeNamespace)
         ,("openFile", IOFun openFile)
-        ,("pwd", IOFun pwd)]
+        ,("pwd", IOFun pwd)
+        ,("eval", IOFun kerEval)]
 
 -- Impure Functions ---------------------------------------------------
+
+kerEval :: IOFun
+kerEval root = do
+        Var first <- evalToImpure (getAnonArg 0 root)
+        case first of
+                "pandoc" -> do
+                        Var content <- evalToImpure (getAnonArg 1 root)
+                        evalPandoc content root
+                x -> eval x root
 
 pwd :: IOFun
 pwd root =  EitherT $ do
@@ -45,8 +55,8 @@ cat root = do
                 _       -> "Improper syntax for cat."
         returnMessage m root
 
-let' :: KerFun
-let' root = do
+kerLet :: KerFun
+kerLet root = do
         Var n <- getAnonArg 0 root
         v <- getAnonArg 1 root
         insertSymbol n v root >>= returnMessage "let success"
