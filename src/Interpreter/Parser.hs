@@ -8,7 +8,6 @@ import           Data.List
 import           Text.ParserCombinators.Parsec
 
 type RecordName = String
-type RecordValue = String
 
 type Record = (RecordName, ParsedText)
 
@@ -26,16 +25,18 @@ instance Show ParsedText where
         show (Literal x) = '\"' : x ++ "\""
         show (ParseList xs) = concat $ intersperse "\n  " ("[" : (foldr (\x acc -> (show x) : acc) [] xs) ++ ["]"])
         show (Record (name, val)) = "(" ++ name ++ ", " ++ (show val) ++ ")"
+        show (AnonymousPlaceholder x) = '@' : (show x)
+        show (NamedPlaceholder x) = '$' : x
 
 parseAnonPlaceholder :: Parser ParsedText
 parseAnonPlaceholder = do
-        char '@'
+        _ <- char '@'
         index <- many1 digit
         return $ AnonymousPlaceholder (read index :: Int)
 
 parseNamedPlaceholder :: Parser ParsedText
 parseNamedPlaceholder = do
-        char '$'
+        _ <- char '$'
         name <- many1 (letter <|> digit)
         return $ NamedPlaceholder name
 
@@ -91,6 +92,8 @@ parseEscapes = do
                 "//" -> return '/'
                 "\\n" -> return '\n'
                 "\\t" -> return '\t'
+                _     -> return ' ' -- To stop warnings
+                
 
 
 parseAny :: Parser ParsedText

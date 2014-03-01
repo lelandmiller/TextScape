@@ -3,7 +3,6 @@ module Interpreter.Data where
 
 -- Imports ------------------------------------------------------------
 import           Control.Monad
-import           Control.Monad.Identity
 import           Control.Monad.Trans
 import qualified Data.Map               as Map
 import           Interpreter.Util
@@ -58,12 +57,15 @@ data Obj = Var String
          | IOFun IOFun
 
 instance Show Obj where
-        show (Var s) = s
-        show (NS s) = Map.foldrWithKey (\k x ks -> k ++ ":(" ++ (show x) ++ ") " ++ ks) [] s
-        show (Buf _) = ""
-        show (KerFun _) = "Kernel Function"
-        show (List s) = show s --"[" ++ (foldr (\x ks -> (show x) ++ ks) [] s) ++ "]"
+        show o = case o of
+                (Var s) -> s
+                (NS s) -> Map.foldrWithKey (\k x ks -> k ++ ":(" ++ (show x) ++ ") " ++ ks) [] s
+                (Buf _) -> ""
+                (KerFun _) -> "Pure Kernel Function"
+                (IOFun _) -> "Impure Kernel Function"
+                (List s) -> show s --"[" ++ (foldr (\x ks -> (show x) ++ ks) [] s) ++ "]"
 
+messagePath :: String
 messagePath = "Kernel.message"
 -- Functions ----------------------------------------------------------
 
@@ -72,6 +74,9 @@ returnMessage m root = insertSymbol messagePath (Var m) root
 
 returnImpureMessage :: String -> Obj -> ImpureEvaluation
 returnImpureMessage m root = EitherT . return $ returnMessage m root
+
+returnImpureError :: String -> ImpureEvaluation
+returnImpureError = EitherT . return . Left
 
 -- TODO: Cleanup
 getMessage :: Obj -> String

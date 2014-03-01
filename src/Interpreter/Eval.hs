@@ -5,11 +5,13 @@ module Interpreter.Eval where
 -- Imports ------------------------------------------------------------
 import           Interpreter.Data
 import           Interpreter.Parser
+
 argNS :: String
 argNS = "Kernel.Args"
 
 anonymousArgPath :: [Char]
 anonymousArgPath = argNS ++ "._"
+
 -- Functions ----------------------------------------------------------
 eval :: String -> Obj -> ImpureEvaluation
 eval expression root =
@@ -36,8 +38,9 @@ apply f args root = do
         oldArgNS <-  getSymbolImpure argNS root
         newNS <-  insertSymbolImpure argNS emptyNS root >>= loadArgs args
         case f of
-                (KerFun f) -> evalToImpure $ f newNS >>= insertSymbol argNS oldArgNS
-                (IOFun f) ->  f newNS >>= insertSymbolImpure argNS oldArgNS
+                (KerFun f') -> evalToImpure $ f' newNS >>= insertSymbol argNS oldArgNS
+                (IOFun  f') -> f' newNS >>= insertSymbolImpure argNS oldArgNS
+                _           -> returnImpureError "Error, object cannot be interpreted as a function."
 
 getArg :: String -> Obj -> Evaluation
 getArg n = getSymbol (argNS ++ n)
@@ -65,5 +68,6 @@ loadArg (ParseList xs) root = do
         newRoot <- evalExpression (ParseList xs) root
         let newMessage = getMessage newRoot
         returnImpureMessage oldMessage newRoot >>= loadArg (Literal newMessage)
+loadArg _ _ = returnImpureError "Expression contains invalid argument."
 
 
