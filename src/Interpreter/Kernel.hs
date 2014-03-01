@@ -2,6 +2,9 @@ module Interpreter.Kernel (kernelFunctions) where
 
 import           Interpreter.Data
 import           Interpreter.Eval
+import Control.Monad.Trans
+import Control.Monad.Identity
+import System.Directory
 
 
 kernelFunctions :: [(String, Obj)]
@@ -9,16 +12,33 @@ kernelFunctions =
         [("cat", KerFun cat)
         ,("let", KerFun let')
         ,("listSym", KerFun listSym)
-        ,("makeNamespace", KerFun makeNamespace)]
+        ,("makeNamespace", KerFun makeNamespace)
+        ,("openFile", IOFun openFile)
+        ,("pwd", IOFun pwd)]
 
-{-
-openFile :: KerFun
-openFile root = do
-  name <- getAnonArg 0 root
-  let contents = case readFile name of
-        IO s -> s
-  returnMessage (Var contents) root
--}
+
+pwd :: IOFun
+pwd root =  EitherT $ do
+        c <- getCurrentDirectory
+        return $ returnMessage c root
+                
+
+
+
+openFile :: IOFun
+openFile root =  do
+        Var filename <- evalToImpure (getAnonArg 0 root)
+        EitherT $ openFile' filename root
+                
+-- TODO: Fix error state
+openFile' :: String -> Obj -> IO Evaluation
+openFile' filename root = do
+        content <- readFile filename
+        return $ returnMessage content root
+
+        
+
+
 makeNamespace :: KerFun
 makeNamespace root = do
         Var name <- getAnonArg 0 root

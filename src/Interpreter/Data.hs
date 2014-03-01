@@ -1,31 +1,53 @@
-module Interpreter.Data
-( Obj (..)
-, emptyNS
-, insertSymbol
-, getSymbol
-, removeSymbol
-, importSymbols
-, KerFun
-, RetObj
-, returnMessage
-, getMessage
-, appendToList) where
+module Interpreter.Data where
+
 
 -- Imports ------------------------------------------------------------
-import qualified Data.Map         as Map
+import           Control.Monad
+import           Control.Monad.Identity
+import           Control.Monad.Trans
+import qualified Data.Map               as Map
 import           Interpreter.Util
-
 
 -- Data Types ---------------------------------------------------------
 type SymbolName = String
 type ErrorMessage = String
 
-type RetObj = Either ErrorMessage Obj
+-- type RetObj = Either ErrorMessage Obj
+
+--type Evaluation = EitherT ErrorMessage Obj
+type Evaluation = Either ErrorMessage Obj
+
+returnEvaluationError :: String -> Evaluation
+returnEvaluationError = Left
+--type ImpureEvaluation = IO Evaluation
+
+
+evalToImpure :: Evaluation -> ImpureEvaluation
+evalToImpure = EitherT . return
+
+type ImpureEvaluation = EitherT IO Obj
+
+returnImpureEvaluationError :: ErrorMessage -> ImpureEvaluation
+returnImpureEvaluationError = EitherT . return . Left
+
+newtype EitherT m a = EitherT { runEitherT :: m (Either ErrorMessage a) }
+
+instance Monad m => Monad (EitherT m) where
+        return = EitherT . return . Right
+        x >>= f = EitherT $ do either_val <- runEitherT x
+                               case either_val of
+                                        Right value -> runEitherT $ f value
+                                        Left err  -> return $ Left err
+
+instance MonadTrans EitherT where
+    lift = EitherT . (liftM Right)
+
 
 type Buf = String
 
-type KerFun = (Obj -> RetObj)
-type IOFun  = (Obj -> IO RetObj)
+--type KerFun = (Obj -> RetObj)
+type KerFun  = (Obj -> Evaluation)
+type IOFun   = (Obj -> ImpureEvaluation)
 type NS = (Map.Map SymbolName Obj)
 
 data Obj = Var String
@@ -45,9 +67,13 @@ instance Show Obj where
 messagePath = "Kernel.message"
 -- Functions ----------------------------------------------------------
 
-returnMessage :: String -> Obj -> RetObj
+returnMessage :: String -> Obj -> Evaluation
 returnMessage m root = insertSymbol messagePath (Var m) root
 
+returnImpureMessage :: String -> Obj -> ImpureEvaluation
+returnImpureMessage m root = EitherT . return $ returnMessage m root
+
+-- TODO: Cleanup
 getMessage :: Obj -> String
 getMessage root = case getSymbol messagePath root of
         Left m -> m
@@ -56,12 +82,13 @@ getMessage root = case getSymbol messagePath root of
 
 -- TODO: Need to add a does object function and fix this, currently relies on failure
 -- of lookup to insert new array
-appendToList :: String -> Obj -> Obj -> RetObj
+appendToList :: String -> Obj -> Obj -> Evaluation
 appendToList name object root =
         case getSymbol name root of
                 Right (List l) -> insertSymbol name (List (l ++ [object])) root
                 _ -> insertSymbol name (List []) root >>= appendToList name object
-
+appendToListImpure :: String -> Obj -> Obj -> ImpureEvaluation
+appendToListImpure name object root = EitherT . return $ appendToList name object root
 
 emptyNS :: Obj
 emptyNS = NS (Map.empty)
@@ -79,31 +106,37 @@ insertSymbol name value root =
     where namel = splitString name '.'
           newRoot = insertSymbol' namel value root
 -}
-insertSymbol :: String -> Obj -> Obj -> RetObj
+insertSymbol :: String -> Obj -> Obj -> Evaluation
 insertSymbol name value root =
     case newRoot of
-        Just r -> Right r
-        Nothing -> Left "Error in insertSymbol."
+        Just r -> return r
+        Nothing -> returnEvaluationError "Error in insertSymbol."
     where namel = splitString name '.'
           newRoot = modifySymbolEntry (Map.insert) namel value root
 
-removeSymbol :: String -> Obj -> RetObj
+insertSymbolImpure :: String -> Obj -> Obj -> ImpureEvaluation
+insertSymbolImpure name value root = EitherT . return $ insertSymbol name value root 
+
+
+removeSymbol :: String -> Obj -> Evaluation
 removeSymbol name root =
     case newRoot of
-        Just r -> Right r
-        Nothing -> Left "Error in insertSymbol'."
+        Just r -> return r
+        Nothing -> returnEvaluationError "Error in insertSymbol'."
     where namel = splitString name '.'
           newRoot = modifySymbolEntry (\symname _ ns -> Map.delete symname ns) namel emptyNS root
 
 {- | Takes a fully-qualified pathname as 'String' and a root 'Obj' which
      should be a 'NS' and returns
 -}
-getSymbol :: String -> Obj -> RetObj
+getSymbol :: String -> Obj -> Evaluation
 getSymbol name root = getSymbol' (splitString name '.') root
 
+getSymbolImpure :: String -> Obj -> ImpureEvaluation
+getSymbolImpure name root = EitherT . return $ getSymbol name root
 
-importSymbols :: [(String, Obj)] -> Obj -> RetObj
-importSymbols xs root = foldr (\(name, val) acc  -> acc >>= insertSymbol name val) (Right root) xs
+importSymbols :: [(String, Obj)] -> Obj -> Evaluation
+importSymbols xs root = foldr (\(name, val) acc  -> acc >>= insertSymbol name val) (return root) xs
 
 
 -- Internal Functions -------------------------------------------------
@@ -133,7 +166,7 @@ insertSymbol' _ _ _ = Nothing
 -}
 
 
-getSymbol' :: [String] -> Obj -> RetObj
+getSymbol' :: [String] -> Obj -> Evaluation
 getSymbol' []     root = return root
 getSymbol' (k:[]) root = lookupObj k root
 getSymbol' (k:ks) root = lookupObj k root >>= (\x -> getSymbol' ks x)
@@ -141,12 +174,12 @@ getSymbol' (k:ks) root = lookupObj k root >>= (\x -> getSymbol' ks x)
 {- | Returns the entry given as a 'String' is it is a child of the given namespace
      'Obj'. Otherwise returns an error message.
 -}
-lookupObj :: String -> Obj -> RetObj
+lookupObj :: String -> Obj -> Evaluation
 lookupObj name (NS space) =
     case result of
-      Just ret    -> Right ret
-      Nothing     -> Left ("Object " ++ name ++ " not found.")
+      Just ret    -> return ret
+      Nothing     -> returnEvaluationError ("Object " ++ name ++ " not found.")
     where result = Map.lookup name space
-lookupObj _ _ = Left "Lookup attempted on a non-namespace object."
+lookupObj _ _ = returnEvaluationError "Lookup attempted on a non-namespace object."
 
 
