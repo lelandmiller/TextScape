@@ -105,18 +105,56 @@ parseAny = parseLiteral
 parseExpression :: String -> Either ParseError ParsedText
 parseExpression = parse parseList "textscape"
 
-parseExpressions :: String -> Either ParseError [ParsedText]
-parseExpressions = parse (sepBy parseList (many anyChar)) "textscape"
+parseSpacedExpression :: Parser ParsedText
+parseSpacedExpression = do 
+        spaces
+        x <- parseList
+        spaces
+        return x
 
+expressionsParser :: Parser [ParsedText]
+expressionsParser = do
+        spaces
+        x <- sepBy parseList spaces
+        spaces
+        return x
+
+parseExpressions :: String -> Either ParseError [ParsedText]
+parseExpressions = parse expressionsParser "textscape"
+
+{-
 parsePandocBlock :: Parser [ParsedText]
 parsePandocBlock = do
-        _ <- string "```textscape"
+        _ <- string "```ts"
+        _ <- spaces
         l <- sepBy parseList spaces
+        _ <- spaces
         _ <- string "```"
         return l
+-}
 
-parsePandoc :: String -> Either ParseError [ParsedText]
-parsePandoc input = liftM concat $ parse (sepBy parsePandocBlock (many anyChar)) "textscape" input
+parsePandocBlock :: Parser String
+parsePandocBlock = do
+        _ <- string "```ts"
+        _ <- spaces
+        l <- manyTill anyChar (try (string "```"))
+        --l <- many (noneOf "`") 
+        --_ <- spaces
+        --_ <- string "```"
+        return l
+
+parsePandocDoc = do
+        _ <- manyTill anyChar (try (string "```ts"))
+        x <- manyTill parseSpacedExpression (try (string "```"))
+        --string "```"
+        return $ x
+        
+        {-simpleComment   = do{ string "<!--"
+                    ; manyTill anyChar (try (string "-->"))
+                    }-}
+
+--parsePandoc :: String -> Either ParseError String --[ParsedText]
+parsePandoc input = liftM concat $ parse (many (try parsePandocDoc)) "ts" input --liftM concat $ parse parsePandocDoc "textscape" input
 
 
 

@@ -5,16 +5,24 @@ import           Interpreter.Eval
 import           System.Directory
 
 kernelFunctions :: [(String, Obj)]
-kernelFunctions =
-        [("cat", KerFun cat)
-        ,("let", KerFun kerLet)
-        ,("listSym", KerFun listSym)
-        ,("makeNamespace", KerFun makeNamespace)
-        ,("openFile", IOFun openFile)
-        ,("pwd", IOFun pwd)
-        ,("eval", IOFun kerEval)]
+kernelFunctions = impureFunctions ++ pureFunctions
 
 -- Impure Functions ---------------------------------------------------
+
+impureFunctions :: [(String, Obj)]
+impureFunctions =
+        [("openFile", IOFun openFile)
+        ,("pwd", IOFun pwd)
+        ,("eval", IOFun kerEval)
+        ,("cd", IOFun cd)
+        ,("writeFile", IOFun kerWriteFile)
+        ,("ls", IOFun ls)]
+
+ls :: IOFun
+ls root = EitherT $ do
+        cwd <- getCurrentDirectory
+        buff <- (getDirectoryContents cwd)
+        return $ returnMessage (show buff) root
 
 kerEval :: IOFun
 kerEval root = do
@@ -30,6 +38,22 @@ pwd root =  EitherT $ do
         c <- getCurrentDirectory
         return $ returnMessage c root
 
+cd :: IOFun
+cd root =  do
+        Var filename <- evalToImpure (getAnonArg 0 root)
+        EitherT $ do
+                setCurrentDirectory filename
+                return $ returnMessage ("Changed directory to " ++ filename) root
+
+kerWriteFile :: IOFun
+kerWriteFile root = do
+        Var filename <- evalToImpure (getAnonArg 0 root)
+        Var content  <- evalToImpure (getAnonArg 1 root)
+        EitherT $ do
+                writeFile filename content
+                return $ returnMessage ("Wrote data to " ++ filename) root
+                
+        
 openFile :: IOFun
 openFile root =  do
         Var filename <- evalToImpure (getAnonArg 0 root)
@@ -42,6 +66,13 @@ openFile' filename root = do
 
 -- Pure Functions -----------------------------------------------------
 
+pureFunctions :: [(String, Obj)]
+pureFunctions =
+        [("cat", KerFun cat)
+        ,("let", KerFun kerLet)
+        ,("listSym", KerFun listSym)
+        ,("makeNamespace", KerFun makeNamespace)]
+
 makeNamespace :: KerFun
 makeNamespace root = do
         Var name <- getAnonArg 0 root
@@ -51,7 +82,7 @@ cat :: KerFun
 cat root = do
         args <- getSymbol anonymousArgPath root
         let m = case args of
-                List xs -> unwords $ foldr (\x acc -> (show x) : acc) [] xs
+                List xs -> concat $ foldr (\x acc -> (show x) : acc) [] xs
                 _       -> "Improper syntax for cat."
         returnMessage m root
 

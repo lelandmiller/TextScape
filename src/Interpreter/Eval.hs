@@ -24,7 +24,7 @@ evalPandoc input root =
         case parsePandoc input of
                 Right expr -> evalExpressions expr root
                 Left m -> returnImpureEvaluationError (show m)
-
+--
 evalExpressions :: [ParsedText] -> Obj -> ImpureEvaluation
 evalExpressions expressions root = foldl (\acc x -> acc >>= evalExpression x) (return root) expressions
 
