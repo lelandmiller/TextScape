@@ -6,6 +6,7 @@ import           Control.Monad
 import           Control.Monad.Trans
 import qualified Data.Map               as Map
 import           Interpreter.Util
+import Data.List (intersperse)
 
 -- Data Types ---------------------------------------------------------
 type SymbolName = String
@@ -51,19 +52,37 @@ type NS = (Map.Map SymbolName Obj)
 
 data Obj = Var String
          | NS NS
-         | Buf Buf
          | List [Obj]
          | KerFun KerFun
          | IOFun IOFun
-
+--  Buf Buf
+         
 instance Show Obj where
         show o = case o of
                 (Var s) -> s
                 (NS s) -> Map.foldrWithKey (\k x ks -> k ++ ":(" ++ (show x) ++ ") " ++ ks) [] s
-                (Buf _) -> ""
+                --(Buf _) -> ""
                 (KerFun _) -> "Pure Kernel Function"
                 (IOFun _) -> "Impure Kernel Function"
                 (List s) -> show s --"[" ++ (foldr (\x ks -> (show x) ++ ks) [] s) ++ "]"
+
+printSymbolTree :: Obj -> String
+printSymbolTree = printSymbolTree' "" "root"
+
+printSymbolTree' :: String -> String -> Obj -> String
+printSymbolTree' indent name obj =
+        case obj of 
+                (NS s)     -> indent ++ n' ++ " (namespace)\n" 
+                                ++ concat (intersperse "\n" (Map.foldrWithKey (\k x ks -> [printSymbolTree' (indent ++ "  ") k x] ++ ks) [] s))
+                (Var s)    -> indent ++ n' ++ "/" ++ s ++ "/"
+                (List s)   -> indent ++ n' ++ "[" 
+                                ++ unwords (foldr (\x xs -> [printSymbolTree' (indent ++ "  ") "" x] ++ xs) [[]] s)
+                                ++ "]"
+                (KerFun _) -> indent ++ n' ++ "Pure Kernel Function"
+                (IOFun _)  -> indent ++ n' ++ "Impure Kernel Function"
+        where n' = case name of; "" -> ""; x'  -> x' ++ ": "
+        
+        
 
 messagePath :: String
 messagePath = "Kernel.message"

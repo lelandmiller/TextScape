@@ -93,4 +93,4 @@ kerLet root = do
         insertSymbol n v root >>= returnMessage "let success"
 
 listSym :: KerFun
-listSym root = returnMessage (show root) root
+listSym root = returnMessage (printSymbolTree root) root

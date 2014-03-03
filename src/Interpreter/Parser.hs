@@ -6,6 +6,7 @@ module Interpreter.Parser where
 import           Control.Monad
 import           Data.List
 import           Text.ParserCombinators.Parsec
+import           Interpreter.Data
 
 type RecordName = String
 
@@ -17,6 +18,7 @@ data ParsedText = Atom String
                 | Record (RecordName, ParsedText)
                 | AnonymousPlaceholder Int
                 | NamedPlaceholder String
+                | FilledPlaceholder Obj
 
 
 
@@ -27,6 +29,7 @@ instance Show ParsedText where
         show (Record (name, val)) = "(" ++ name ++ ", " ++ (show val) ++ ")"
         show (AnonymousPlaceholder x) = '@' : (show x)
         show (NamedPlaceholder x) = '$' : x
+        show (FilledPlaceholder x) = "Filled Placeholder: " ++ show x
 
 parseAnonPlaceholder :: Parser ParsedText
 parseAnonPlaceholder = do
@@ -94,8 +97,6 @@ parseEscapes = do
                 "\\t" -> return '\t'
                 _     -> return ' ' -- To stop warnings
                 
-
-
 parseAny :: Parser ParsedText
 parseAny = parseLiteral
        <|> parseList
@@ -112,50 +113,22 @@ parseSpacedExpression = do
         spaces
         return x
 
+{-
 expressionsParser :: Parser [ParsedText]
 expressionsParser = do
         spaces
-        x <- sepBy parseList spaces
-        spaces
+        x <- sepBy (parseList) spaces
         return x
-
-parseExpressions :: String -> Either ParseError [ParsedText]
-parseExpressions = parse expressionsParser "textscape"
-
-{-
-parsePandocBlock :: Parser [ParsedText]
-parsePandocBlock = do
-        _ <- string "```ts"
-        _ <- spaces
-        l <- sepBy parseList spaces
-        _ <- spaces
-        _ <- string "```"
-        return l
 -}
 
-parsePandocBlock :: Parser String
-parsePandocBlock = do
-        _ <- string "```ts"
-        _ <- spaces
-        l <- manyTill anyChar (try (string "```"))
-        --l <- many (noneOf "`") 
-        --_ <- spaces
-        --_ <- string "```"
-        return l
-
+parsePandocDoc :: Parser [ParsedText]
 parsePandocDoc = do
         _ <- manyTill anyChar (try (string "```ts"))
         x <- manyTill parseSpacedExpression (try (string "```"))
-        --string "```"
         return $ x
-        
-        {-simpleComment   = do{ string "<!--"
-                    ; manyTill anyChar (try (string "-->"))
-                    }-}
 
---parsePandoc :: String -> Either ParseError String --[ParsedText]
-parsePandoc input = liftM concat $ parse (many (try parsePandocDoc)) "ts" input --liftM concat $ parse parsePandocDoc "textscape" input
+parseExpressions :: String -> Either ParseError [ParsedText]
+parseExpressions = parse (many (try parseSpacedExpression)) "textscape"
 
-
-
-
+parsePandoc :: [Char] -> Either ParseError [ParsedText]
+parsePandoc input = liftM concat $ parse (many (try parsePandocDoc)) "ts" input
