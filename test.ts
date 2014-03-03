@@ -3,15 +3,18 @@
 This is a test of the textscape broadcast system.
 
 ```ts
-(let /x/ /test/)
-(let /y/ /test2/)
-(cat x y)
+(let /printHello/ /
+	(cat //Hello, // @0 //!//)
+/) 
+(let /fTest/ /
+	(@0 //x// //Test//)
+/)
 ```
 
 Did that work?
 
 ```ts
-(cat y)
+(cat /Module loaded/)
 ```
 
 The end
