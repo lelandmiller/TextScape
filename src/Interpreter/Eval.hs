@@ -5,7 +5,7 @@ module Interpreter.Eval where
 -- Imports ------------------------------------------------------------
 import           Interpreter.Data
 import           Interpreter.Parser
-import Control.Applicative ((<*>), (<$>), pure)
+import Control.Applicative ((<*>), pure)
 
 argNS :: String
 argNS = "Kernel.Args"
@@ -33,6 +33,7 @@ evalExpressions expressions root = foldl (\acc x -> acc >>= evalExpression x) (r
 evalExpression :: ParsedText -> Obj -> ImpureEvaluation
 evalExpression (ParseList (Atom x:xs)) root = getSymbolImpure x root >>= (\function ->  apply function xs root)
 evalExpression (ParseList (FilledPlaceholder x:xs)) root = apply x xs root
+evalExpression (ParseList (Literal x:xs)) root = apply (Var x) xs root
 evalExpression _ _ = returnImpureEvaluationError "Evaluation error, expression was not a list."
 
 apply :: Obj -> [ParsedText] -> Obj -> ImpureEvaluation
@@ -105,6 +106,6 @@ loadArg (ParseList xs) root = do
         newRoot <- evalExpression (ParseList xs) root
         let newMessage = getMessage newRoot
         returnImpureMessage oldMessage newRoot >>= loadArg (Literal newMessage)
-loadArg _ _ = returnImpureError "Expression contains invalid argument."
+loadArg o _ = returnImpureError $ "Expression contains invalid argument: " ++ (show o)
 
 

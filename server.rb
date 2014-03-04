@@ -5,8 +5,6 @@
 
 require "webrick"
 
-runcommand = "cabal run"
-
 class MyNormalClass
   def self.add (a, b)
     a.to_i + b.to_i
@@ -54,7 +52,7 @@ end
 
 class ShellInterface
   def initialize()
-    @proc = IO.popen(runcommand, 'w+')
+    @proc = IO.popen("cabal run", 'w+')
   end
 
   def exec(c)
