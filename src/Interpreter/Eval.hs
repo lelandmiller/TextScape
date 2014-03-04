@@ -63,6 +63,7 @@ fillPlaceholders l root = foldr (\x acc -> pure (:) <*> fillParsedText x root <*
 fillParsedText :: ParsedText -> Obj -> Either String ParsedText
 fillParsedText t root = case t of
                      ParseList xs           -> pure ParseList <*> (foldr (\x acc -> pure (:) <*> fillParsedText x root <*> acc) (Right []) xs)
+                     PointerList xs         -> pure PointerList <*> (foldr (\x acc -> pure (:) <*> fillParsedText x root <*> acc) (Right []) xs)
                      Record (n, x)          -> fillParsedText x root >>= (\y -> Right $ Record (n, y))
                      AnonymousPlaceholder i -> case getAnonArg i root of
                                                         Right x -> Right $ FilledPlaceholder x
@@ -94,6 +95,11 @@ loadArg (Record (name, Literal x)) root = insertSymbolImpure (argNS ++ "." ++ na
 loadArg (Record (name, Atom x)) root = getSymbolImpure x root >>= (\sym -> insertSymbolImpure (argNS ++ "." ++ name) sym root)
 loadArg (Literal x) root = appendToListImpure anonymousArgPath (Var x) root
 loadArg (Atom x) root = getSymbolImpure x root >>= (\sym -> appendToListImpure anonymousArgPath (sym) root)
+loadArg (PointerList xs) root = do
+        let oldMessage = getMessage root
+        newRoot <- evalExpression (ParseList xs) root
+        let newMessage = getMessage newRoot
+        returnImpureMessage oldMessage newRoot >>= loadArg (Atom newMessage)
 loadArg (ParseList xs) root = do
         let oldMessage = getMessage root
         newRoot <- evalExpression (ParseList xs) root

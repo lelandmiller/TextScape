@@ -19,7 +19,7 @@ data ParsedText = Atom String
                 | AnonymousPlaceholder Int
                 | NamedPlaceholder String
                 | FilledPlaceholder Obj
-
+                | PointerList [ParsedText]
 
 
 instance Show ParsedText where
@@ -30,6 +30,7 @@ instance Show ParsedText where
         show (AnonymousPlaceholder x) = '@' : (show x)
         show (NamedPlaceholder x) = '$' : x
         show (FilledPlaceholder x) = "Filled Placeholder: " ++ show x
+        show (PointerList x) = "*" ++ show x
 
 parseAnonPlaceholder :: Parser ParsedText
 parseAnonPlaceholder = do
@@ -59,6 +60,14 @@ parseList = do
         x <- sepBy parseAny (many1 space)
         _ <- char ')'
         return $ ParseList x
+
+parsePointerList :: Parser ParsedText
+parsePointerList = do
+        _ <- char '*'
+        _ <- char '('
+        x <- sepBy parseAny (many1 space)
+        _ <- char ')'
+        return $ PointerList x
 
 parseSymbol :: Parser ParsedText
 parseSymbol = do
@@ -100,6 +109,7 @@ parseEscapes = do
 parseAny :: Parser ParsedText
 parseAny = parseLiteral
        <|> parseList
+       <|> parsePointerList
        <|> parsePlaceholder
        <|> (try parseRecord <|> parseSymbol)
 
