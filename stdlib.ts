@@ -29,12 +29,27 @@ TODO:
 First we initialize the buffer system, which requires us to create a namespace to hold the buffers.
 
 ```ts
-(makeNamespace /stdlib.Buffers/)
+(makeNamespace /Buffer/)
+(makeNamespace /Buffer._System/)
 ```
 
-Now define several basic functions for accessing buffers.
+Buffer.new! takes a name on @0 and creates a buffer
 
 ```ts
+(let /Buffer.new!/ /(Buffer._System.new (cat //Buffer.// @0))/)
+```
+
+This is how we create a new buffer.
+
+```ts
+(let /Buffer._System.new/ ##
+  (makeNamespace @0)
+  (let (cat @0 /.content/) //)
+  (let (cat @0 /.filename/) //)
+  (let (cat @0 /.open!/)
+       (cat /(let /// (cat @0 /.content/) /// (openFile @0))/))
+##)
+```
 
 (let /showBuffer/ /(cat *(cat //stdlib.Buffers.// @0))/)
 
@@ -44,5 +59,13 @@ Now define several basic functions for accessing buffers.
 
 (let /appendBuffer/ /(putBuffer @0 (cat (showBuffer @0) @1))/) 
 
-```
 
+## Finish
+
+```ts
+(let /x/ ##
+This is the end.
+#How does that sound?
+##)
+
+```
