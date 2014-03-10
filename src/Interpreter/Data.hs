@@ -83,6 +83,24 @@ printSymbolTree' indent name obj =
         where n' = case name of; "" -> ""; x'  -> x' ++ ": "
         
         
+printSymbolTreeJSON :: Obj -> String
+printSymbolTreeJSON root = printSymbolTreeJSON' "root" root ""
+
+printSymbolChildrenJSON :: Obj -> String
+printSymbolChildrenJSON (NS root) =
+        "[" ++ concat (intersperse "," (Map.foldrWithKey (\k x ks -> [printSymbolTreeJSON' k x ""] ++ ks) [] root)) ++ "]"
+
+printSymbolTreeJSON' :: String -> Obj -> String -> String
+printSymbolTreeJSON' name obj path =
+    case obj of 
+      (NS s) -> head' ++ ",\"children\":[" 
+                    ++ concat (intersperse "," (Map.foldrWithKey (\k x ks -> [printSymbolTreeJSON' k x (path ++ name ++ ".")] ++ ks) [] s)) ++ "]}"
+      _      -> head' ++ "}"
+    where head' = "{\"text\":\"" ++ name ++ "\",\"id\":\"" ++ path ++ name ++ "\""
+
+        
+-- "[{\"label\" : \"test\", \"id\" : \"1\"}, {\"label\":\"test2\", \"id\" : \"2\"}]"
+
 
 messagePath :: String
 messagePath = "Kernel.message"

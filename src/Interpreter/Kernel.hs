@@ -71,7 +71,10 @@ pureFunctions =
         [("cat", KerFun cat)
         ,("let", KerFun kerLet)
         ,("listSym", KerFun listSym)
-        ,("makeNamespace", KerFun makeNamespace)]
+        ,("makeNamespace", KerFun makeNamespace)
+        ,("listSymJSON", KerFun listSymJSON)]
+
+
 
 makeNamespace :: KerFun
 makeNamespace root = do
@@ -94,3 +97,10 @@ kerLet root = do
 
 listSym :: KerFun
 listSym root = returnMessage (printSymbolTree root) root
+
+listSymJSON :: KerFun
+listSymJSON root = do
+  Var n <- getAnonArg 0 root
+  case n of
+    "root" -> returnMessage (printSymbolChildrenJSON root) root
+    _      -> returnMessage ("[]\n") root

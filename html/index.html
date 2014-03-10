@@ -1,0 +1,282 @@
+<!doctype html>
+<html class="no-js" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TextScape</title>
+    <!--  <link rel="stylesheet" href="css/foundation.css" />-->
+    <link rel="stylesheet" href="css/reset.css" />
+    <script src="js/vendor/modernizr.js"></script>
+
+    <script src="http://cdn.alloyui.com/2.0.0/aui/aui-min.js"></script>
+    <link href="http://cdn.alloyui.com/2.0.0/aui-css/css/bootstrap.min.css" rel="stylesheet"></link>
+
+    <link rel="stylesheet" href="jsTree/themes/default/style.min.css" />
+  </head>
+  <body>
+
+    
+
+
+    
+    <div id="container">
+
+      <div id="menu-row">
+	TextScape
+      </div>
+
+      <div class="fill-remainder-vertical">
+
+	<div id="editor-row">
+	  <div id="navigator-wrapper">
+	    <div id="navigator">
+	    </div>
+	  </div>
+	  <div id="editor-wrapper">
+	    <div id="editor">
+	    </div>
+	  </div>
+	</div>
+
+	<div id="prompt-row">
+	  <div id="prompt-history" class="fill-remainder-vertical">
+	  </div>
+	  <div id="entry-row">
+	    <span> 
+	      <span style="color:#CCFF99">></span> 
+	      <span style="color:#99FFFF">></span>
+	    </span>	    
+	    <input id="command-input" class="fill-remainder-horizontal" type="text">
+	    
+	  </div> 
+	</div>
+      </div>
+    </div>
+
+
+
+    <style>
+     #entry-row {
+       background: black;
+     }
+     #command-input {
+       
+       background: black;
+       color: white;
+       border: black;
+       
+       font-family: Consolas, "Andale Mono WT", "Andale Mono", "Lucida Console", "Lucida Sans Typewriter", "DejaVu Sans Mono", "Bitstream Vera Sans Mono", "Liberation Mono", "Nimbus Mono L", Monaco, "Courier New", Courier, monospace;
+     }
+     #command-input, #run-command {
+       padding: 0;
+       margin: 0;
+     }
+     #entry-row {
+       width: 100%;
+       background: black;
+
+     }
+     #prompt-history {
+       height: 100%;
+       overflow: scroll;
+     }
+     #prompt-row {
+       width: 100%;
+     }
+
+     
+
+     #menu-row {
+       font-family: Consolas, "Andale Mono WT", "Andale Mono", "Lucida Console", "Lucida Sans Typewriter", "DejaVu Sans Mono", "Bitstream Vera Sans Mono", "Liberation Mono", "Nimbus Mono L", Monaco, "Courier New", Courier, monospace;
+       background: #050505;
+       color: white;
+       width: 100%
+       padding: 5px;
+     }
+     html {
+       height: 100%;
+     }
+     body {
+       height: 100%;
+       margin: 0;
+       padding: 0;
+     }
+     #container {
+       height: 100%;
+     }
+     #prompt-row {
+       height: 30%;
+     }
+     #editor-row {
+       height: 70%;
+     }
+     #navigator-wrapper {
+       float: left;
+       width: 20%;
+       height: 100%;
+       overflow: scroll;
+     }
+     #navigator {
+       
+     }
+     #editor-wrapper {
+       position: relative;
+       float: right;
+       height: 100%;
+       width: 80%;
+     }
+     #editor { 
+       position: absolute;
+       top: 0;
+       right: 0;
+       bottom: 0;
+       left: 0;
+     }
+    </style>
+
+
+
+    <script src="js/vendor/jquery.js"></script>
+    <script src="/ace-builds/src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
+    <script src="jsTree/jstree.min.js"></script>
+    <script>
+
+     var currentEditorSymbol = "stdlib.readme";
+     var scrollPos = 0;
+     
+     function refreshEditor(cb) {
+       $.ajax({
+	 url: "/run",
+	 data: { command : "(cat " + currentEditorSymbol + ")" }
+       }).done(function (ret) {
+	 editor.setValue(ret);
+	 if (cb !== undefined) cb();
+       });
+     }
+     
+     function refresh () {
+       refreshEditor(function () {
+	 scrollPos = $('#navigator-wrapper').scrollTop();
+	 $('#navigator').jstree("refresh");
+       });
+     };
+
+
+
+     function treeDataAJAX(obj, cb) {
+       $.ajax('/run', {
+	 dataType: 'json',
+	 data : {command : '(listSymJSON /root/)' }
+       }).done(function (data) {
+	 cb.call (this, data)
+       })
+     }
+
+     $(document).ready(function () { 
+       $('#navigator').jstree({
+	 'core' : {
+	   'data' : treeDataAJAX
+	 }
+       }); 
+       
+       $('#navigator').on("refresh.jstree", function (e, data) {
+	 $('#navigator-wrapper').scrollTop(scrollPos)
+	 
+       });
+
+       $('#navigator').on("changed.jstree", function (e, data) {
+	 console.log(data.selected);
+	 currentEditorSymbol = data.selected;
+	 refreshEditor();
+       });
+       
+       refreshEditor();
+     });
+
+     function runCommand(command, callback) {
+        $.ajax('/run', {
+         dataType: 'text',
+         data: {command: command}
+       }).done(callback);
+     }
+
+
+     function runCommandInput () {
+
+       // Run Command
+       var command = $('#command-input').val();
+
+       var historyString = '<div class="history-input"><pre>shell$ ' +
+                           command + '</pre></div>';
+
+
+
+       runCommand(command, function(result) {
+         historyString += '<div class="history-output"><pre>' +
+                          result + '</pre></div>';
+         ;
+	 
+         $('#prompt-history').append(historyString);
+
+         // Scroll to bottom
+         $('#prompt-history').scrollTop(999999999);
+
+	 refresh();
+       });
+
+       $('#command-input').val("");
+     }
+
+     $('#command-input').keypress(function(e) {
+       if (e.which == 13) {//Enter key pressed
+         runCommandInput();
+       }
+       e.stopPropagation();
+     });
+
+
+     $(window).resize(function () {
+       $('.fill-remainder-vertical').each(function(index, element) {
+	 var parentInner = $(element).parent().innerHeight();
+	 
+	 var sumOtherOuter = 0;
+	 
+	 $(element).siblings().each(function(index,sibling) {
+	   sumOtherOuter += $(sibling).outerHeight();
+	 });
+	 
+	 var myHeight = parentInner - sumOtherOuter;
+	 
+	 $(element).height(myHeight);
+	 
+       });
+
+       $('.fill-remainder-horizontal').each(function(index, element) {
+	 var parentInner = $(element).parent().innerWidth();
+	 
+	 var sumOtherOuter = 0;
+	 
+	 $(element).siblings().each(function(index,sibling) {
+	   sumOtherOuter += $(sibling).outerWidth();
+	 });
+	 
+	 var myWidth = parentInner - sumOtherOuter;
+	 
+	 $(element).width(myWidth);
+	 
+       });
+
+     });
+
+     $(document).ready(function () {
+       $(window).resize();
+     });
+
+
+     var editor = ace.edit("editor");
+     editor.setTheme("ace/theme/monokai");
+     editor.getSession().setMode("ace/mode/javascript");
+
+    </script>
+  </body>
+</html>

@@ -8,6 +8,16 @@ First create a namespace to hold items loaded in the standard library:
 (makeNamespace /stdlib/)
 ```
 
+## Load README
+
+```ts
+(let /stdlib.readme/ /Welcome to TextScape!
+TODO:
+- Pretty up interface, including theme, ace mode, tree whole line, up for history.
+- Empty buffer should clear editor
+/)
+```
+
 ## Helper Functions
 
 ```ts
