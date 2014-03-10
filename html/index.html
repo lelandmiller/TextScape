@@ -141,6 +141,7 @@
     <script src="jsTree/jstree.min.js"></script>
     <script>
 
+
      var currentEditorSymbol = "stdlib.readme";
      var scrollPos = 0;
      
@@ -181,7 +182,6 @@
        
        $('#navigator').on("refresh.jstree", function (e, data) {
 	 $('#navigator-wrapper').scrollTop(scrollPos)
-	 
        });
 
        $('#navigator').on("changed.jstree", function (e, data) {
@@ -190,7 +190,13 @@
 	 refreshEditor();
        });
        
+       // Load and select README
        refreshEditor();
+       $('#navigator').on("loaded.jstree", function (e,data) {
+	 $('#navigator').jstree('select_node', 'stdlib.readme');
+       })
+			  
+       
      });
 
      function runCommand(command, callback) {
