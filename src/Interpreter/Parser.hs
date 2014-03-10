@@ -71,7 +71,7 @@ parsePointerList = do
 
 parseSymbol :: Parser ParsedText
 parseSymbol = do
-  symbol <- many1 (letter <|> oneOf "." <|> digit)
+  symbol <- many1 (letter <|> oneOf ".!_" <|> digit)
   return (Atom symbol)
 
 {-
@@ -104,10 +104,22 @@ parseEscapes = do
                 "//" -> return '/'
                 "\\n" -> return '\n'
                 "\\t" -> return '\t'
-                _     -> return ' ' -- To stop warnings
-                
+                _     -> return ' '
+
+
+parseLiteralBlock :: Parser ParsedText
+parseLiteralBlock = do
+        _ <- char '#'
+        delim <- manyTill anyChar (try space)
+        _ <- spaces
+        s <- manyTill anyChar (try (spaces >> string ("#" ++ delim)))
+        return $ Literal s
+        
+
+           
 parseAny :: Parser ParsedText
 parseAny = parseLiteral
+       <|> parseLiteralBlock
        <|> parseList
        <|> parsePointerList
        <|> parsePlaceholder
