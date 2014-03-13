@@ -15,6 +15,7 @@ First create a namespace to hold items loaded in the standard library:
 TODO:
 - Pretty up interface, including theme, ace mode, tree whole line, up for history.
 - Empty buffer should clear editor
+- Remove console references
 /)
 ```
 
@@ -47,7 +48,10 @@ This is how we create a new buffer.
   (let (cat @0 /.content/) //)
   (let (cat @0 /.filename/) //)
   (let (cat @0 /.open!/)
-       (cat /(let /// (cat @0 /.content/) /// (openFile @0))/))
+       (cat /(let /// @0 /.content// (openFile @0))/
+       	    /(let /// @0 /.filename// (cat (pwd) //////// @0))/))
+  (let (cat @0 /.save!/)
+       (cat /(writeFile / @0 /.filename / @0 /.content)/))
 ##)
 ```
 
@@ -68,4 +72,9 @@ This is the end.
 #How does that sound?
 ##)
 
+(let /stdlib.ts/ (openFile /stdlib.ts/))
+
+(let /sayHello!/ #
+  (cat /Hello, / @0 /!/)
+#)
 ```

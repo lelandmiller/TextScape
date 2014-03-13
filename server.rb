@@ -61,6 +61,20 @@ class NonCachingFileHandler < WEBrick::HTTPServlet::FileHandler
     res['Expires']       = Time.now - 100**4
   end
   
+  def do_POST(request, response)
+    command = request.query["command"]
+
+    response.status = 200
+    response.content_type = "text/plain"
+    
+    case request.path
+    when "/run"
+      response.body = $interpreter.exec(command) + "\n"
+
+    end
+    prevent_caching(response)
+  end
+
   def do_GET(request, response)
 
     command = request.query["command"]
