@@ -1,6 +1,5 @@
 module Interpreter.Data where
 
-
 -- Imports ------------------------------------------------------------
 import           Control.Monad
 import           Control.Monad.Trans
@@ -11,21 +10,14 @@ import Data.List (intersperse)
 -- Data Types ---------------------------------------------------------
 type SymbolName = String
 type ErrorMessage = String
-
--- type RetObj = Either ErrorMessage Obj
-
---type Evaluation = EitherT ErrorMessage Obj
 type Evaluation = Either ErrorMessage Obj
+type ImpureEvaluation = EitherT IO Obj
 
 returnEvaluationError :: String -> Evaluation
 returnEvaluationError = Left
---type ImpureEvaluation = IO Evaluation
-
 
 evalToImpure :: Evaluation -> ImpureEvaluation
 evalToImpure = EitherT . return
-
-type ImpureEvaluation = EitherT IO Obj
 
 returnImpureEvaluationError :: ErrorMessage -> ImpureEvaluation
 returnImpureEvaluationError = EitherT . return . Left
@@ -42,10 +34,8 @@ instance Monad m => Monad (EitherT m) where
 instance MonadTrans EitherT where
     lift = EitherT . (liftM Right)
 
-
 type Buf = String
 
---type KerFun = (Obj -> RetObj)
 type KerFun  = (Obj -> Evaluation)
 type IOFun   = (Obj -> ImpureEvaluation)
 type NS = (Map.Map SymbolName Obj)
@@ -55,7 +45,6 @@ data Obj = Var String
          | List [Obj]
          | KerFun KerFun
          | IOFun IOFun
---  Buf Buf
          
 instance Show Obj where
         show o = case o of
@@ -64,7 +53,7 @@ instance Show Obj where
                 --(Buf _) -> ""
                 (KerFun _) -> "Pure Kernel Function"
                 (IOFun _) -> "Impure Kernel Function"
-                (List s) -> show s --"[" ++ (foldr (\x ks -> (show x) ++ ks) [] s) ++ "]"
+                (List s) -> show s
 
 printSymbolTree :: Obj -> String
 printSymbolTree = printSymbolTree' "" "root"
