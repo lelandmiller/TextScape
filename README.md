@@ -1,7 +1,5 @@
 # TextScape
 
-By: Leland Miller & Michael Kell
-
 ## Requirements
 
 To run the TextScape interpreter you must have the Haskell Platform installed.
@@ -14,7 +12,7 @@ To view the served editor, a web browser supporting JavaScript is required.
 
 ### Interpreter
 
-To run a TextScape interpreter session, from the main folder type:
+To run a TextScape interpreter session, from the code folder type:
 
 ```
 cabal run
